@@ -1,0 +1,90 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8000,
+    "debug": false,
+    "log_level": "INFO"
+  },
+  "kernels": {
+    "python3": {
+      "display_name": "Python 3",
+      "language": "python",
+      "executable": "python",
+      "description": "Python 3 kernel for general purpose computing",
+      "env": {
+        "PYTHONPATH": "/usr/local/lib/python3.11/site-packages"
+      }
+    },
+    "sagemath": {
+      "display_name": "SageMath",
+      "language": "python",
+      "executable": "sage",
+      "description": "SageMath kernel for mathematical computations",
+      "env": {
+        "SAGE_ROOT": "/opt/sage"
+      }
+    },
+    "julia": {
+      "display_name": "Julia",
+      "language": "julia",
+      "executable": "julia",
+      "description": "Julia kernel for high-performance numerical computing",
+      "env": {
+        "JULIA_NUM_THREADS": "auto"
+      }
+    },
+    "ir": {
+      "display_name": "R",
+      "language": "R",
+      "executable": "R",
+      "description": "R kernel for statistical computing",
+      "env": {
+        "R_LIBS_USER": "/usr/local/lib/R/site-library"
+      }
+    }
+  },
+  "notebooks": {
+    "directory": "./notebooks",
+    "auto_save": true,
+    "backup": true,
+    "backup_directory": "./notebooks/.backup",
+    "max_backup_files": 5,
+    "file_extensions": [".ipynb"],
+    "default_kernel": "python3",
+    "template_directory": "./templates"
+  },
+  "execution": {
+    "timeout": 30,
+    "max_output_length": 10000,
+    "interrupt_on_timeout": true,
+    "store_history": true,
+    "max_history_entries": 1000
+  },
+  "export": {
+    "formats": ["html", "pdf", "py", "md"],
+    "output_directory": "./exports",
+    "include_input": true,
+    "include_output": true,
+    "template_file": null
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "./logs/jupyter-mcp-server.log",
+    "max_file_size": "10MB",
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  },
+  "security": {
+    "allow_kernel_install": false,
+    "allowed_kernels": ["python3", "sagemath", "julia"],
+    "max_execution_time": 300,
+    "max_memory_usage": "1GB"
+  },
+  "features": {
+    "variable_inspection": true,
+    "package_installation": true,
+    "notebook_export": true,
+    "cell_execution": true,
+    "kernel_management": true
+  }
+}
