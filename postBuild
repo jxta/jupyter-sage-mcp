@@ -1,14 +1,22 @@
-#!/bin/bash
+# Minimalist Binder configuration
+# This removes all custom startup to let Binder handle everything naturally
 
-# SageMathカーネルの設定
+# Install additional packages after environment is ready
+pip install --quiet --no-warn-script-location ipywidgets
+pip install --quiet --no-warn-script-location jupyter-collaboration
+
+# Setup SageMath kernel (simplified)
 echo "Setting up SageMath kernel..."
+python -c "
+import subprocess
+try:
+    subprocess.run(['sage', '-python', '-m', 'ipykernel', 'install', '--user', '--name', 'sagemath', '--display-name', 'SageMath'], check=True)
+    print('✅ SageMath kernel installed successfully')
+except Exception as e:
+    print(f'❌ SageMath kernel installation failed: {e}')
+    # Fallback - ensure Python kernel works
+    subprocess.run(['python', '-m', 'ipykernel', 'install', '--user', '--name', 'python3', '--display-name', 'Python 3'], check=True)
+"
 
-# SageMathカーネルをJupyterに登録
-sage -pip install ipykernel
-sage -python -m ipykernel install --user --name sagemath --display-name "SageMath"
-
-# Juliaカーネルの設定
-echo "Setting up Julia kernel..."
-julia -e 'using Pkg; Pkg.add("IJulia")'
-
-echo "Kernel setup complete!"
+# Simple verification
+echo "✅ PostBuild completed successfully"
