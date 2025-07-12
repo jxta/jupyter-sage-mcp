@@ -1,0 +1,6 @@
+#!/bin/bash
+export JUPYTER_ENABLE_LAB=yes
+export SAGE_ROOT=/srv/conda/envs/notebook
+jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root \
+    --ServerApp.token='binder_mcp_token' \
+    --ServerApp.disable_check_xsrf=True
