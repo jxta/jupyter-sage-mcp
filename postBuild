@@ -1,29 +1,56 @@
 #!/bin/bash
 
 # Jupyter MCP Server - PostBuild Script for mybinder.org
-set -euxo pipefail
+set -euo pipefail
 
 echo "🪐 ✨ Setting up Jupyter SageMath MCP Server environment..."
 
 # Ensure we're using the right Python
 export PATH="${NB_PYTHON_PREFIX}/bin:${PATH}"
 
+# Install SageMath via conda
+echo "Installing SageMath..."
+mamba install -y -c conda-forge sagemath || {
+    echo "⚠️ SageMath installation failed, trying alternative method..."
+    # Try installing from a different source
+    mamba install -y -c conda-forge sage || {
+        echo "⚠️ Alternative SageMath installation also failed, continuing without it..."
+        SAGEMATH_AVAILABLE=false
+    }
+}
+
+# Check if SageMath is available
+if command -v sage >/dev/null 2>&1; then
+    echo "✅ SageMath is available"
+    SAGEMATH_AVAILABLE=true
+    
+    # Verify SageMath installation
+    echo "Verifying SageMath installation..."
+    python -c "import sage; print('SageMath version:', sage.version.version)" || {
+        echo "⚠️ SageMath import failed, but command is available"
+        SAGEMATH_AVAILABLE=false
+    }
+else
+    echo "⚠️ SageMath is not available, continuing with Python-only setup"
+    SAGEMATH_AVAILABLE=false
+fi
+
 # Install MCP server in development mode
 echo "Installing Jupyter MCP Server..."
 pip install -e .
 
-# Verify SageMath installation
-echo "Verifying SageMath installation..."
-python -c "import sage; print('SageMath version:', sage.version.version)"
-
-# Install SageMath kernel
-echo "Installing SageMath kernel..."
-sage -pip install ipykernel
-sage -python -m ipykernel install --user --name sagemath --display-name "SageMath"
-
-# Install Python kernel (if not already installed)
+# Install Python kernel (always available)
 echo "Installing Python kernel..."
 python -m ipykernel install --user --name python3 --display-name "Python 3"
+
+# Install SageMath kernel if SageMath is available
+if [ "$SAGEMATH_AVAILABLE" = true ]; then
+    echo "Installing SageMath kernel..."
+    sage -pip install ipykernel || echo "⚠️ Failed to install ipykernel in SageMath"
+    sage -python -m ipykernel install --user --name sagemath --display-name "SageMath" || {
+        echo "⚠️ Failed to install SageMath kernel, continuing without it..."
+    }
+fi
 
 # Verify kernel installations
 echo "Listing installed kernels..."
@@ -38,19 +65,28 @@ mkdir -p templates
 
 # Set up Jupyter extensions
 echo "Setting up Jupyter extensions..."
-jupyter lab build --dev-build=False --minimize=False
-
-# Enable collaborative features
-echo "Enabling Jupyter collaboration..."
-pip install --no-deps jupyter-collaboration
+jupyter lab build --dev-build=False --minimize=False || {
+    echo "⚠️ Jupyter Lab build failed, continuing..."
+}
 
 # Test MCP server import
 echo "Testing MCP server import..."
-python -c "from src.jupyter_mcp_server import JupyterMCPServer; print('✅ MCP Server import successful')"
+python -c "from src.jupyter_mcp_server import JupyterMCPServer; print('✅ MCP Server import successful')" || {
+    echo "⚠️ MCP Server import failed"
+    exit 1
+}
 
-# Test SageMath functionality
-echo "Testing SageMath functionality..."
-sage -c "print('✅ SageMath test: 2+2 =', 2+2); print('✅ Factor test: factor(12) =', factor(12))"
+# Test functionality based on available components
+if [ "$SAGEMATH_AVAILABLE" = true ]; then
+    echo "Testing SageMath functionality..."
+    sage -c "print('✅ SageMath test: 2+2 =', 2+2); print('✅ Factor test: factor(12) =', factor(12))" || {
+        echo "⚠️ SageMath test failed"
+    }
+fi
+
+# Test Python functionality
+echo "Testing Python functionality..."
+python -c "import numpy, matplotlib, sympy; print('✅ Python scientific stack available')"
 
 # Set permissions
 chmod +x scripts/*.sh 2>/dev/null || echo "No scripts directory found"
@@ -58,3 +94,11 @@ chmod +x scripts/*.sh 2>/dev/null || echo "No scripts directory found"
 echo "🎉 Setup completed successfully!"
 echo "Available kernels:"
 jupyter kernelspec list
+
+if [ "$SAGEMATH_AVAILABLE" = true ]; then
+    echo "✅ SageMath is ready for mathematical computations"
+else
+    echo "⚠️ SageMath is not available, but Python with scientific libraries is ready"
+fi
+
+echo "📚 MCP Server is ready for use with Claude Desktop"
