@@ -2,26 +2,41 @@
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jxta/jupyter-sage-mcp/main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![SageMath](https://img.shields.io/badge/SageMath-10.2-orange.svg)](https://www.sagemath.org/)
 
 SageMathとPythonカーネルの両方をサポートするModel Context Protocol (MCP) 対応Jupyter環境です。mybinder.orgとNII解析基盤の両方で利用可能です。
 
 ## 🚀 クイックスタート
 
-### mybinder.orgで試す
+### 🌐 MyBinder.org で即座に試す（推奨）
+
+**以下のボタンをクリックするだけで、ブラウザ上でSageMath対応MCP環境が起動します：**
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jxta/jupyter-sage-mcp/main)
 
-上記のボタンをクリックするだけで、ブラウザ上でSageMath対応MCP環境が起動します。
+**✨ 起動後の手順：**
+1. 環境構築（3-5分）を待つ
+2. JupyterLabが自動で開く
+3. `notebooks/test_mcp.ipynb` でテスト実行
+4. 利用可能カーネル：
+   - **Python 3**: データサイエンス、機械学習
+   - **SageMath**: 数学計算、数論、暗号学
 
-### ローカル環境での実行
+**📝 注意事項：**
+- セッション時間: 最大2時間
+- メモリ制限: 2GB
+- 重要なファイルは定期的にダウンロード保存を推奨
+
+### 🏠 ローカル環境での実行
 
 ```bash
 git clone https://github.com/jxta/jupyter-sage-mcp.git
 cd jupyter-sage-mcp
 conda env create -f environment.yml
 conda activate jupyter-mcp-sage
+chmod +x postBuild
+./postBuild
 jupyter lab
 ```
 
@@ -40,22 +55,24 @@ jupyter lab
 
 | 環境 | 状態 | 特徴 | 制限 |
 |------|------|------|------|
-| **mybinder.org** | ✅ | 即座利用可能 | 2時間セッション |
-| **NII解析基盤** | ✅ | 永続化・高性能 | 認証設定要 |
-| **ローカル環境** | ✅ | フル機能 | セットアップ要 |
+| **🌐 mybinder.org** | ✅ | 即座利用可能、セットアップ不要 | 2時間セッション |
+| **🏫 NII解析基盤** | ✅ | 永続化・高性能 | 認証設定要 |
+| **🏠 ローカル環境** | ✅ | フル機能 | セットアップ要 |
 
 ## 📁 ファイル構成
 
 ```
 jupyter-sage-mcp/
 ├── README.md                   # このファイル
-├── environment.yml            # Conda環境設定
+├── environment.yml            # Conda環境設定（SageMath含む）
 ├── requirements.txt           # Python追加パッケージ
-├── postBuild                 # Binder用セットアップ
+├── runtime.txt               # Python版指定（MyBinder用）
+├── postBuild                 # Binder用セットアップスクリプト
 ├── start                     # Binder用起動スクリプト
 ├── src/
 │   └── mcp_sage_helper.py    # MCPクライアント実装
 ├── notebooks/
+│   ├── test_mcp.ipynb        # 基本テスト用
 │   └── sage_mcp_demo.ipynb   # デモノートブック
 ├── config/
 │   └── claude_config.json    # Claude Desktop設定例
@@ -76,7 +93,7 @@ conda activate jupyter-mcp-sage
 #### 手動インストール
 ```bash
 # SageMath
-conda install -c conda-forge sagemath=10.2
+conda install -c conda-forge sagemath
 
 # Jupyter環境
 pip install jupyterlab==4.4.1 jupyter-collaboration==4.0.2
@@ -90,7 +107,7 @@ pip install websockets requests nest-asyncio
 
 ```bash
 # SageMathカーネル登録
-sage -python -m sage_setup.jupyter.install --user
+sage -python -m ipykernel install --user --name sagemath --display-name "SageMath"
 
 # 確認
 jupyter kernelspec list
@@ -115,6 +132,36 @@ jupyter kernelspec list
 ```
 
 ## 📝 使用方法
+
+### 🌐 MyBinder.orgでの基本使用
+
+1. **環境起動**
+   - [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jxta/jupyter-sage-mcp/main) をクリック
+   - 環境構築完了まで3-5分待機
+
+2. **テストノートブック実行**
+   ```python
+   # notebooks/test_mcp.ipynb を開く
+   # 各セルを順次実行してテスト
+   ```
+
+3. **SageMath機能テスト**
+   ```python
+   # SageMathカーネルで実行
+   factor(2^100 - 1)
+   plot(sin(x), (x, 0, 2*pi))
+   ```
+
+4. **データサイエンステスト**
+   ```python
+   # Python 3カーネルで実行
+   import pandas as pd
+   import matplotlib.pyplot as plt
+   
+   df = pd.DataFrame({'x': range(10), 'y': [i**2 for i in range(10)]})
+   df.plot()
+   plt.show()
+   ```
 
 ### 基本的なMCP機能
 
@@ -277,6 +324,11 @@ await connect_external()
 
 ## 📚 サンプルノートブック
 
+### [notebooks/test_mcp.ipynb](notebooks/test_mcp.ipynb)
+- 基本機能テスト
+- Python & SageMath動作確認
+- 簡単な数学計算例
+
 ### [notebooks/sage_mcp_demo.ipynb](notebooks/sage_mcp_demo.ipynb)
 - MCPセットアップ
 - SageMath基本機能
@@ -325,33 +377,6 @@ VS Codeの`.vscode/mcp.json`：
 }
 ```
 
-### カスタムMCP拡張
-
-独自のMCP機能を追加する場合：
-
-```python
-# src/custom_mcp_extension.py
-class CustomSageMCP(SageMCPClient):
-    def __init__(self):
-        super().__init__()
-        self.custom_tools = {}
-    
-    def add_custom_tool(self, name, func):
-        """カスタムツールの追加"""
-        self.custom_tools[name] = func
-    
-    def execute_custom_tool(self, tool_name, **kwargs):
-        """カスタムツールの実行"""
-        if tool_name in self.custom_tools:
-            return self.custom_tools[tool_name](**kwargs)
-        else:
-            return {"error": f"Tool {tool_name} not found"}
-
-# 使用例
-custom_mcp = CustomSageMCP()
-custom_mcp.add_custom_tool("prime_check", lambda n: is_prime(n))
-```
-
 ## 🔧 トラブルシューティング
 
 ### よくある問題
@@ -359,7 +384,7 @@ custom_mcp.add_custom_tool("prime_check", lambda n: is_prime(n))
 #### 1. SageMathカーネルが見つからない
 ```bash
 # 強制再インストール
-sage -python -m sage_setup.jupyter.install --user --force
+sage -python -m ipykernel install --user --name sagemath --display-name "SageMath" --force
 jupyter kernelspec list
 ```
 
@@ -373,7 +398,7 @@ logging.basicConfig(level=logging.DEBUG)
 print("System info:", mcp.get_system_info())
 ```
 
-#### 3. Binder環境でのタイムアウト
+#### 3. MyBinder環境でのタイムアウト
 - セッション時間制限（2時間）を考慮
 - 重要な作業は定期的にダウンロード保存
 - 長時間の計算は分割実行
