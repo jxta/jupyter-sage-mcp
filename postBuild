@@ -1,75 +1,60 @@
 #!/bin/bash
 
-echo "🔧 Setting up SageMath MCP environment..."
+# Jupyter MCP Server - PostBuild Script for mybinder.org
+set -euxo pipefail
 
-# SageMathカーネルの登録
-echo "📚 Installing SageMath kernel..."
-sage -python -m sage_setup.jupyter.install --user
+echo "🪐 ✨ Setting up Jupyter SageMath MCP Server environment..."
 
-# カーネル確認
-echo "🔍 Checking available kernels..."
+# Ensure we're using the right Python
+export PATH="${NB_PYTHON_PREFIX}/bin:${PATH}"
+
+# Install MCP server in development mode
+echo "Installing Jupyter MCP Server..."
+pip install -e .
+
+# Verify SageMath installation
+echo "Verifying SageMath installation..."
+python -c "import sage; print('SageMath version:', sage.version.version)"
+
+# Install SageMath kernel
+echo "Installing SageMath kernel..."
+sage -pip install ipykernel
+sage -python -m ipykernel install --user --name sagemath --display-name "SageMath"
+
+# Install Python kernel (if not already installed)
+echo "Installing Python kernel..."
+python -m ipykernel install --user --name python3 --display-name "Python 3"
+
+# Verify kernel installations
+echo "Listing installed kernels..."
 jupyter kernelspec list
 
-# Jupyter設定ディレクトリ作成
-echo "⚙️ Creating Jupyter configuration..."
-mkdir -p ~/.jupyter
+# Create necessary directories
+echo "Creating directories..."
+mkdir -p notebooks
+mkdir -p exports
+mkdir -p logs
+mkdir -p templates
 
-# Jupyter Server設定
-cat > ~/.jupyter/jupyter_server_config.py << 'EOF'
-c.ServerApp.allow_origin = '*'
-c.ServerApp.disable_check_xsrf = True
-c.ServerApp.token = 'binder_mcp_token'
-c.ServerApp.password = ''
-c.ServerApp.open_browser = False
-c.ServerApp.port = 8888
-c.ServerApp.ip = '0.0.0.0'
+# Set up Jupyter extensions
+echo "Setting up Jupyter extensions..."
+jupyter lab build --dev-build=False --minimize=False
 
-# MCP用の設定
-c.ServerApp.allow_remote_access = True
-c.ServerApp.trust_xheaders = True
-EOF
+# Enable collaborative features
+echo "Enabling Jupyter collaboration..."
+pip install --no-deps jupyter-collaboration
 
-# JupyterLab設定
-cat > ~/.jupyter/jupyter_lab_config.py << 'EOF'
-c.LabApp.check_for_updates_class = "jupyterlab.NeverCheckForUpdate"
-c.ExtensionApp.open_browser = False
-EOF
+# Test MCP server import
+echo "Testing MCP server import..."
+python -c "from src.jupyter_mcp_server import JupyterMCPServer; print('✅ MCP Server import successful')"
 
-# MCP用のPython環境確認
-echo "🐍 Checking Python environment..."
-python -c "
-import sys
-print(f'Python: {sys.version}')
+# Test SageMath functionality
+echo "Testing SageMath functionality..."
+sage -c "print('✅ SageMath test: 2+2 =', 2+2); print('✅ Factor test: factor(12) =', factor(12))"
 
-try:
-    import sage.all
-    print('✅ SageMath available')
-except ImportError:
-    print('❌ SageMath not available')
+# Set permissions
+chmod +x scripts/*.sh 2>/dev/null || echo "No scripts directory found"
 
-try:
-    import jupyter_client
-    print('✅ Jupyter client available')
-except ImportError:
-    print('❌ Jupyter client not available')
-
-try:
-    import websockets
-    print('✅ WebSockets available')
-except ImportError:
-    print('❌ WebSockets not available')
-"
-
-# srcディレクトリをPythonパスに追加
-echo "📁 Setting up Python path..."
-mkdir -p ~/.ipython/profile_default/startup/
-echo "import sys; sys.path.append('/home/jovyan/src')" > ~/.ipython/profile_default/startup/00-setup-path.py
-
-# MCPデモファイルの準備
-echo "📝 Preparing demo files..."
-mkdir -p /home/jovyan/notebooks
-mkdir -p /home/jovyan/src
-mkdir -p /home/jovyan/config
-
-echo "✅ SageMath MCP environment setup complete!"
-echo "🚀 Ready to start Jupyter with SageMath and MCP support"
+echo "🎉 Setup completed successfully!"
+echo "Available kernels:"
+jupyter kernelspec list
