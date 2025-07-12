@@ -6,7 +6,7 @@ dependencies:
   - python=3.11
   - pip
   - jupyter
-  - jupyterlab>=4.0.0
+  - jupyterlab>=4.0.0,<5.0.0
   - notebook
   - nbformat
   - nbconvert
@@ -14,7 +14,6 @@ dependencies:
   - pyzmq
   - traitlets
   - python-dateutil
-  - sagemath=10.*
   - ipywidgets
   - matplotlib
   - numpy
