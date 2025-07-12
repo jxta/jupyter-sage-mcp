@@ -30,6 +30,9 @@ dependencies:
   - gap
   - maxima
   - pari
+  # Julia
+  - julia
+  # R
   - r-base
   - r-irkernel
   # Additional scientific packages
