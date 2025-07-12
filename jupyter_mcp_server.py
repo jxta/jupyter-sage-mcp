@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Jupyter MCP Server for Claude Desktop
+Jupyter MCP Server for Claude Desktop - Fixed Version
 Allows Claude Desktop to execute code in Jupyter kernels
 """
 
@@ -11,31 +11,40 @@ import os
 import sys
 import uuid
 from typing import Dict, Any, Optional, List
-from contextlib import asynccontextmanager
 
 try:
     import httpx
     import websockets
-    from mcp.server.models import InitializeResult
-    from mcp.server import NotificationOptions, Server
-    from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
-    import mcp.types as types
+    import mcp
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.server import Server
+    from mcp.types import (
+        Tool, 
+        TextContent, 
+        CallToolResult,
+        ListToolsResult
+    )
 except ImportError:
     print("Installing required packages...")
     import subprocess
     subprocess.check_call([sys.executable, "-m", "pip", "install", "mcp", "httpx", "websockets"])
     import httpx
     import websockets
-    from mcp.server.models import InitializeResult
-    from mcp.server import NotificationOptions, Server
-    from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
-    import mcp.types as types
+    import mcp
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.server import Server
+    from mcp.types import (
+        Tool, 
+        TextContent, 
+        CallToolResult,
+        ListToolsResult
+    )
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Get Jupyter configuration from environment
+# Get Jupyter configuration from environment or command line
 JUPYTER_URL = os.getenv("JUPYTER_URL", "http://localhost:8888")
 JUPYTER_TOKEN = os.getenv("JUPYTER_TOKEN", "")
 
@@ -43,7 +52,6 @@ class JupyterMCPServer:
     def __init__(self):
         self.server = Server("jupyter-executor")
         self.kernels: Dict[str, str] = {}  # kernel_name -> kernel_id
-        self.websockets: Dict[str, Any] = {}
         self.jupyter_client = None
         
     async def initialize_jupyter_client(self):
@@ -183,7 +191,7 @@ class JupyterMCPServer:
         """Setup MCP tool handlers"""
         
         @self.server.list_tools()
-        async def handle_list_tools() -> List[Tool]:
+        async def list_tools() -> List[Tool]:
             """List available tools"""
             return [
                 Tool(
@@ -244,18 +252,18 @@ class JupyterMCPServer:
             ]
         
         @self.server.call_tool()
-        async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+        async def call_tool(name: str, arguments: dict) -> List[TextContent]:
             """Handle tool execution"""
             
             if name == "create_python_kernel":
                 try:
                     kernel_id = await self.create_kernel("python3")
-                    return [types.TextContent(
+                    return [TextContent(
                         type="text",
                         text=f"✅ Created Python kernel: {kernel_id}\nYou can now execute Python code!"
                     )]
                 except Exception as e:
-                    return [types.TextContent(
+                    return [TextContent(
                         type="text",
                         text=f"❌ Failed to create Python kernel: {str(e)}"
                     )]
@@ -263,12 +271,12 @@ class JupyterMCPServer:
             elif name == "create_sagemath_kernel":
                 try:
                     kernel_id = await self.create_kernel("sagemath")
-                    return [types.TextContent(
+                    return [TextContent(
                         type="text",
                         text=f"✅ Created SageMath kernel: {kernel_id}\nYou can now execute SageMath code!"
                     )]
                 except Exception as e:
-                    return [types.TextContent(
+                    return [TextContent(
                         type="text",
                         text=f"❌ Failed to create SageMath kernel: {str(e)}"
                     )]
@@ -276,7 +284,7 @@ class JupyterMCPServer:
             elif name == "execute_python":
                 code = arguments.get("code", "")
                 if not code:
-                    return [types.TextContent(
+                    return [TextContent(
                         type="text",
                         text="❌ No code provided"
                     )]
@@ -308,12 +316,12 @@ class JupyterMCPServer:
                 else:
                     output_text = f"❌ Execution failed: {result.get('error', 'Unknown error')}"
                 
-                return [types.TextContent(type="text", text=output_text)]
+                return [TextContent(type="text", text=output_text)]
             
             elif name == "execute_sagemath":
                 code = arguments.get("code", "")
                 if not code:
-                    return [types.TextContent(
+                    return [TextContent(
                         type="text",
                         text="❌ No code provided"
                     )]
@@ -345,11 +353,11 @@ class JupyterMCPServer:
                 else:
                     output_text = f"❌ Execution failed: {result.get('error', 'Unknown error')}"
                 
-                return [types.TextContent(type="text", text=output_text)]
+                return [TextContent(type="text", text=output_text)]
             
             elif name == "list_kernels":
                 if not self.kernels:
-                    return [types.TextContent(
+                    return [TextContent(
                         type="text",
                         text="📋 No active kernels. Create a kernel first using create_python_kernel or create_sagemath_kernel."
                     )]
@@ -358,10 +366,10 @@ class JupyterMCPServer:
                 for kernel_name, kernel_id in self.kernels.items():
                     kernel_list += f"  • {kernel_name}: {kernel_id}\n"
                 
-                return [types.TextContent(type="text", text=kernel_list)]
+                return [TextContent(type="text", text=kernel_list)]
             
             else:
-                return [types.TextContent(
+                return [TextContent(
                     type="text",
                     text=f"❌ Unknown tool: {name}"
                 )]
@@ -372,10 +380,14 @@ async def main():
     if len(sys.argv) > 1:
         jupyter_url = sys.argv[1]
         os.environ["JUPYTER_URL"] = jupyter_url
+        global JUPYTER_URL
+        JUPYTER_URL = jupyter_url
     
     if len(sys.argv) > 2:
         jupyter_token = sys.argv[2]
         os.environ["JUPYTER_TOKEN"] = jupyter_token
+        global JUPYTER_TOKEN
+        JUPYTER_TOKEN = jupyter_token
     
     logger.info(f"Starting Jupyter MCP Server")
     logger.info(f"Jupyter URL: {JUPYTER_URL}")
@@ -389,19 +401,9 @@ async def main():
     await mcp_server.initialize_jupyter_client()
     
     # Run server via stdio
-    from mcp.server.stdio import stdio_server
-    
-    async with stdio_server() as (read_stream, write_stream):
+    async with mcp_server.server.stdio_server() as streams:
         await mcp_server.server.run(
-            read_stream,
-            write_stream,
-            InitializeResult(
-                protocolVersion="2024-11-05",
-                capabilities=mcp_server.server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={}
-                )
-            )
+            streams[0], streams[1], mcp_server.server.create_initialization_options()
         )
 
 if __name__ == "__main__":
