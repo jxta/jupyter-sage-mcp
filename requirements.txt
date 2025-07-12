@@ -1,0 +1,8 @@
+jupyter-collaboration==4.0.2
+datalayer_pycrdt==0.12.17
+websockets>=10.0
+requests>=2.25.0
+nest-asyncio>=1.5.0
+jupyter-client>=7.0.0
+plotly>=5.0.0
+seaborn>=0.11.0
