@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "jupyter-sage-binder": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "SERVER_URL",
+        "-e", "TOKEN", 
+        "-e", "NOTEBOOK_PATH",
+        "--network=host",
+        "datalayer/jupyter-mcp-server:latest"
+      ],
+      "env": {
+        "SERVER_URL": "http://localhost:8888",
+        "TOKEN": "binder_mcp_token",
+        "NOTEBOOK_PATH": "notebooks/sage_mcp_demo.ipynb"
+      }
+    },
+    "jupyter-sage-nii": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "SERVER_URL",
+        "-e", "TOKEN", 
+        "-e", "NOTEBOOK_PATH",
+        "datalayer/jupyter-mcp-server:latest"
+      ],
+      "env": {
+        "SERVER_URL": "http://host.docker.internal:8888",
+        "TOKEN": "your_nii_token_here",
+        "NOTEBOOK_PATH": "notebooks/sage_mcp_demo.ipynb"
+      }
+    },
+    "sage-mcp-direct": {
+      "command": "python",
+      "args": ["src/mcp_sage_helper.py"],
+      "env": {
+        "JUPYTER_URL": "http://localhost:8888",
+        "JUPYTER_TOKEN": "binder_mcp_token"
+      }
+    }
+  }
+}
