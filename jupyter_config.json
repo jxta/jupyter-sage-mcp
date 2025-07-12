@@ -1,0 +1,8 @@
+{
+  "NotebookApp": {
+    "default_url": "/lab"
+  },
+  "ServerApp": {
+    "default_url": "/lab"
+  }
+}
