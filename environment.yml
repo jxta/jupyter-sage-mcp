@@ -1,0 +1,26 @@
+name: jupyter-mcp-sage
+channels:
+  - conda-forge
+  - sagemath
+dependencies:
+  - python=3.9
+  - jupyterlab=4.4.1
+  - jupyter-collaboration=4.0.2
+  - ipykernel
+  - sagemath=10.2
+  - sage
+  - numpy
+  - pandas
+  - matplotlib
+  - scipy
+  - sympy
+  - networkx
+  - pip
+  - pip:
+    - datalayer_pycrdt==0.12.17
+    - websockets>=10.0
+    - requests>=2.25.0
+    - nest-asyncio>=1.5.0
+    - jupyter-client>=7.0.0
+    - plotly>=5.0.0
+    - seaborn>=0.11.0
