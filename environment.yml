@@ -25,8 +25,7 @@ dependencies:
   - websockets
   - nest-asyncio
   - ipykernel
-  # SageMath and related packages
-  - sagemath
+  # SageMath - use sage package from conda-forge
   - sage
   - gap
   - maxima
