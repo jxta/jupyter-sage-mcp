@@ -28,6 +28,7 @@ class SageMCPClient:
         self.current_kernel = self._detect_kernel()
         self.session_id = self._generate_session_id()
         self.external_connections = {}
+        self.sagemath_available = self._check_sagemath_availability()
         
     def _detect_kernel(self):
         """現在のカーネルタイプを検出"""
@@ -39,6 +40,26 @@ class SageMCPClient:
         except ImportError:
             logger.info("🐍 Python kernel detected")
             return "python"
+    
+    def _check_sagemath_availability(self):
+        """SageMathの利用可能性をチェック"""
+        try:
+            import sage.all
+            logger.info("✅ SageMath is available for import")
+            return True
+        except ImportError:
+            # コマンドライン版のSageMathをチェック
+            try:
+                result = subprocess.run(['sage', '--version'], 
+                                      capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    logger.info("✅ SageMath command-line is available")
+                    return True
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+            
+            logger.info("⚠️ SageMath is not available, using Python-only mode")
+            return False
     
     def _generate_session_id(self):
         """セッションIDを生成"""
@@ -52,14 +73,18 @@ class SageMCPClient:
             "session_id": self.session_id,
             "base_url": self.base_url,
             "python_version": sys.version,
+            "sagemath_available": self.sagemath_available,
             "available_packages": []
         }
         
         # 利用可能なパッケージチェック
         packages_to_check = [
-            "sage", "numpy", "pandas", "matplotlib", 
+            "numpy", "pandas", "matplotlib", "scipy", "sympy", "networkx",
             "jupyter_client", "websockets", "requests"
         ]
+        
+        if self.sagemath_available:
+            packages_to_check.append("sage")
         
         for pkg in packages_to_check:
             try:
@@ -75,10 +100,17 @@ class SageMCPClient:
         if kernel_type is None:
             kernel_type = self.current_kernel
             
+        # SageMathが要求されているが利用できない場合の処理
+        if kernel_type == "sagemath" and not self.sagemath_available:
+            logger.warning("SageMath not available, falling back to Python with symbolic math")
+            kernel_type = "python"
+            # SageMath特有の構文をPython+SymPyに変換
+            code = self._convert_sage_to_python(code)
+            
         logger.info(f"🔧 Executing code in {kernel_type} kernel")
         
         try:
-            if kernel_type == "sagemath":
+            if kernel_type == "sagemath" and self.sagemath_available:
                 return self._execute_sage_code(code, capture_output)
             else:
                 return self._execute_python_code(code, capture_output)
@@ -86,6 +118,42 @@ class SageMCPClient:
             error_msg = f"Error in {kernel_type}: {e}"
             logger.error(error_msg)
             return {"status": "error", "error": error_msg}
+    
+    def _convert_sage_to_python(self, code):
+        """SageMath特有の構文をPython+SymPyに変換"""
+        try:
+            # 基本的な変換パターン
+            conversions = [
+                # var() → symbols()
+                (r"var\s*\(\s*['\"]([^'\"]+)['\"]\s*\)", r"from sympy import symbols; \1 = symbols('\1')"),
+                (r"var\s*\(\s*([^)]+)\s*\)", r"from sympy import symbols; \1 = symbols(\1)"),
+                # factor() → sympy.factor()
+                ("factor(", "sympy.factor("),
+                # expand() → sympy.expand()
+                ("expand(", "sympy.expand("),
+                # solve() → sympy.solve()
+                ("solve(", "sympy.solve("),
+                # diff() → sympy.diff()
+                ("diff(", "sympy.diff("),
+                # integrate() → sympy.integrate()
+                ("integrate(", "sympy.integrate("),
+            ]
+            
+            converted_code = code
+            for pattern, replacement in conversions:
+                import re
+                converted_code = re.sub(pattern, replacement, converted_code)
+            
+            # SymPyのインポートを追加
+            if "sympy" in converted_code and "import sympy" not in converted_code:
+                converted_code = "import sympy\n" + converted_code
+            
+            logger.info("🔄 Converted SageMath syntax to Python+SymPy")
+            return converted_code
+            
+        except Exception as e:
+            logger.warning(f"Failed to convert SageMath syntax: {e}")
+            return code
     
     def _execute_sage_code(self, code, capture_output=True):
         """SageMathコードの実行"""
@@ -175,6 +243,14 @@ class SageMCPClient:
     def switch_kernel_context(self, kernel_type):
         """カーネルコンテキストの切り替え"""
         if kernel_type in ["python", "sagemath"]:
+            # SageMathが要求されているが利用できない場合
+            if kernel_type == "sagemath" and not self.sagemath_available:
+                logger.warning("SageMath not available, staying in Python context")
+                return {
+                    "status": "warning", 
+                    "message": "SageMath not available, staying in Python context with symbolic math support"
+                }
+            
             self.current_kernel = kernel_type
             logger.info(f"🔄 Switched to {kernel_type} context")
             return {"status": "success", "message": f"Switched to {kernel_type} context"}
@@ -234,6 +310,10 @@ def setup_sage_mcp():
     
     print("✅ SageMath MCP Client initialized!")
     print("🔬 Current kernel:", client.current_kernel)
+    if client.sagemath_available:
+        print("🪐 SageMath: Available")
+    else:
+        print("⚠️ SageMath: Not available (using Python with SymPy)")
     print("📊 System info:", client.get_system_info())
     
     return client
@@ -243,5 +323,14 @@ if __name__ == "__main__":
     mcp = setup_sage_mcp()
     
     # テスト実行
-    test_result = mcp.execute_code("print('Hello from SageMath MCP!')")
+    test_result = mcp.execute_code("print('Hello from MCP!')")
     print("🧪 Test result:", test_result)
+    
+    # SageMath機能のテスト（利用可能な場合）
+    if mcp.sagemath_available:
+        sage_test = mcp.execute_code("factor(2^64-1)", "sagemath")
+        print("🔬 SageMath test:", sage_test)
+    else:
+        # SymPyでのテスト
+        sympy_test = mcp.execute_code("import sympy; sympy.factor(2**64-1)", "python")
+        print("🐍 SymPy test:", sympy_test)
