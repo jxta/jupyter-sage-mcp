@@ -25,6 +25,16 @@ dependencies:
   - websockets
   - nest-asyncio
   - ipykernel
+  # SageMath and related packages
+  - sagemath
+  - sage
+  - gap
+  - maxima
+  - pari
+  - r-base
+  - r-irkernel
+  # Additional scientific packages
+  - cython
   - pip:
     - mcp>=0.1.0
     - jupyter-client>=7.0.0
